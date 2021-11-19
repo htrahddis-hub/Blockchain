@@ -24,7 +24,7 @@ class Transaction{
     }
 
     isValid(){
-        if(fromAddress === null) return true;
+        if(this.fromAddress === null) return true;
 
         if(!this.signature || this.signature.length === 0){
             throw new Error('No signature in this transaction');
@@ -40,8 +40,8 @@ class Block{
         this.timestamp=timestamp;
         this.transactions=transactions;
         this.previousHash =previousHash;
-        this.hash = this.calculateHash();
         this.nonce=0;
+        this.hash = this.calculateHash();
     }
 
     calculateHash(){
@@ -55,6 +55,16 @@ class Block{
         }
 
         console.log("Block minded: "+ this.hash);
+    }
+    
+    hasValidTransaction(){
+        for(const tx of this.transactions){
+            if(!tx.isValid()){
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -75,6 +85,9 @@ class Blockchain{
     }
 
     minePendingTransactions(miningRewardAddress){
+        const rewardTx = new Transaction(null, miningRewardAddress, this.miningReward);
+        this.pendingTransactions.push(rewardTx);
+        
         let block =new Block(Date.now(), this.pendingTransactions);
         block.mineBlock(this.difficulty);
 
@@ -86,9 +99,19 @@ class Blockchain{
         ];
     }
 
-    createTransaction(transaction){
+    addTransaction(transaction){
+
+        if(!transaction.fromAddress || !transaction.toAddress){
+            throw new Error('Transaction must include from and to Adress');
+        }
+
+        if(!transaction.isValid()){
+            throw new Error('Cannot add inalid trasaction to chain');
+        }
+
         this.pendingTransactions.push(transaction);
     }
+
 
     getBalanceOfAddress(address){
         let balance = 0;
@@ -113,6 +136,10 @@ class Blockchain{
             const currentBlock =this.chain[i];
             const previouBlock=this.chain[i-1];
 
+            if(!currentBlock.hasValidTransaction()){
+                return false;
+            }
+
             if(currentBlock.hash  !== currentBlock.calculateHash()){
                 return false;
             }
@@ -121,9 +148,11 @@ class Blockchain{
                 return false;
             }
         }
+
         return true;
     }
+
 }
 
-module.export.Blockchain = Blockchain;
-module.export.Transaction = Transaction;
+module.exports.Blockchain = Blockchain;
+module.exports.Transaction = Transaction;
